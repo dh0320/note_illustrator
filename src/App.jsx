@@ -165,7 +165,7 @@ export default function App() {
           {
             parts: [
               {
-                text: `以下のイラスト設定を英語の画像生成プロンプトに変換してください:\n${promptInput}`,
+                text: `以下のイラスト設定を日本語の画像生成プロンプトに変換してください。日本人向けの画像です。:\n${promptInput}`,
               },
             ],
           },
