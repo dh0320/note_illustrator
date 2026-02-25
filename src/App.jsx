@@ -41,8 +41,8 @@ const fetchWithRetry = async (url, options, maxRetries = 5) => {
 export default function App() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [textModel, setTextModel] = useState('gemini-3.1-pro-preview');
-  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
+  const [textModel, setTextModel] = useState('gemini-2.0-flash');
+  const [imageModel, setImageModel] = useState('gemini-2.0-flash-preview-image-generation');
   const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState(1);
   const [manuscript, setManuscript] = useState('');
@@ -397,8 +397,9 @@ export default function App() {
                 />
               </div>
               <p className="text-xs text-gray-400">
-                フリーティアで使用可能な例: テキスト <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash</code>、
-                画像 <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash-preview-image-generation</code>
+                Google AI Studio APIキーで使用可能なモデル例。<br />
+                テキスト: <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash</code> / <code className="bg-gray-100 px-1 rounded">gemini-1.5-pro</code><br />
+                画像: <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash-preview-image-generation</code>
               </p>
             </div>
           )}
