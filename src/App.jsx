@@ -51,12 +51,15 @@ export default function App() {
   const [globalError, setGlobalError] = useState('');
   const [editingId, setEditingId] = useState(null);
 
-  // Vertex AI Express: APIキーで aiplatform.googleapis.com を使用
+  // Vertex AI Express: x-goog-api-key ヘッダーで認証
   const buildRequest = (model, payload) => ({
-    url: `https://aiplatform.googleapis.com/v1beta1/projects/-/locations/-/publishers/google/models/${model}:generateContent?key=${apiKey}`,
+    url: `https://aiplatform.googleapis.com/v1beta1/projects/-/locations/-/publishers/google/models/${model}:generateContent`,
     options: {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify(payload),
     },
   });
