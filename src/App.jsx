@@ -41,8 +41,8 @@ const fetchWithRetry = async (url, options, maxRetries = 5) => {
 export default function App() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [textModel, setTextModel] = useState('gemini-2.0-flash');
-  const [imageModel, setImageModel] = useState('gemini-2.0-flash-preview-image-generation');
+  const [textModel, setTextModel] = useState('gemini-3.1-pro-preview');
+  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
   const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState(1);
   const [manuscript, setManuscript] = useState('');
@@ -51,16 +51,20 @@ export default function App() {
   const [globalError, setGlobalError] = useState('');
   const [editingId, setEditingId] = useState(null);
 
+  // Vertex AI Express: APIキーで aiplatform.googleapis.com を使用
+  const buildRequest = (model, payload) => ({
+    url: `https://aiplatform.googleapis.com/v1beta1/projects/-/locations/-/publishers/google/models/${model}:generateContent?key=${apiKey}`,
+    options: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  });
+
   // --- Step 1: Analyze Manuscript & Propose Illustrations ---
   const handleAnalyze = async () => {
-    if (!apiKey.trim()) {
-      setGlobalError('APIキーを入力してください。');
-      return;
-    }
-    if (!manuscript.trim()) {
-      setGlobalError('原稿を入力してください。');
-      return;
-    }
+    if (!apiKey.trim()) { setGlobalError('APIキーを入力してください。'); return; }
+    if (!manuscript.trim()) { setGlobalError('原稿を入力してください。'); return; }
 
     setIsProcessing(true);
     setGlobalError('');
@@ -91,14 +95,8 @@ export default function App() {
         },
       };
 
-      const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
+      const { url, options } = buildRequest(textModel, payload);
+      const result = await fetchWithRetry(url, options);
 
       const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error('AIからの応答が空でした。');
@@ -189,14 +187,8 @@ export default function App() {
         },
       };
 
-      const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
+      const { url, options } = buildRequest(textModel, payload);
+      const result = await fetchWithRetry(url, options);
 
       const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
       const parsed = JSON.parse(text);
@@ -216,7 +208,7 @@ export default function App() {
     }
   };
 
-  // --- Step 5: Sequential Image Generation (Gemini image model via generateContent) ---
+  // --- Step 5: Sequential Image Generation ---
   const handleGenerateImages = async () => {
     setStep(5);
     setGlobalError('');
@@ -241,16 +233,9 @@ export default function App() {
           },
         };
 
-        const result = await fetchWithRetry(
-          `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          }
-        );
+        const { url, options } = buildRequest(imageModel, payload);
+        const result = await fetchWithRetry(url, options);
 
-        // Extract image from response inline data parts
         const parts = result.candidates?.[0]?.content?.parts ?? [];
         const imagePart = parts.find(part => part.inlineData?.mimeType?.startsWith('image/'));
 
@@ -344,7 +329,7 @@ export default function App() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Key className="text-emerald-600 w-4 h-4" />
-              <span className="text-sm font-semibold text-gray-700">Gemini APIキー</span>
+              <span className="text-sm font-semibold text-gray-700">Google Cloud APIキー</span>
             </div>
             <button
               type="button"
@@ -373,6 +358,9 @@ export default function App() {
               {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            キーはブラウザ内にのみ保持されます。
+          </p>
 
           {showSettings && (
             <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
@@ -383,7 +371,6 @@ export default function App() {
                   className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-mono focus:ring-1 focus:ring-emerald-500"
                   value={textModel}
                   onChange={e => setTextModel(e.target.value)}
-                  placeholder="gemini-2.0-flash"
                 />
               </div>
               <div>
@@ -393,20 +380,13 @@ export default function App() {
                   className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-mono focus:ring-1 focus:ring-emerald-500"
                   value={imageModel}
                   onChange={e => setImageModel(e.target.value)}
-                  placeholder="gemini-3-pro-image-preview"
                 />
               </div>
-              <p className="text-xs text-gray-400">
-                Google AI Studio APIキーで使用可能なモデル例。<br />
-                テキスト: <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash</code> / <code className="bg-gray-100 px-1 rounded">gemini-1.5-pro</code><br />
-                画像: <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash-preview-image-generation</code>
-              </p>
             </div>
           )}
 
           {!showSettings && (
             <p className="text-xs text-gray-400 mt-1">
-              キーはブラウザ内にのみ保持されます。
               テキスト: <code className="bg-gray-100 px-1 rounded">{textModel}</code> ／
               画像: <code className="bg-gray-100 px-1 rounded">{imageModel}</code>
             </p>
@@ -666,7 +646,6 @@ export default function App() {
                     key={proposal.id}
                     className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-6"
                   >
-                    {/* Image Display Area */}
                     <div className="md:w-1/2 flex-shrink-0 relative bg-gray-50 rounded-lg border border-gray-200 aspect-video flex items-center justify-center overflow-hidden">
                       {proposal.status === 'idle' && (
                         <div className="text-gray-400 flex flex-col items-center">
@@ -706,7 +685,6 @@ export default function App() {
                       )}
                     </div>
 
-                    {/* Details Area */}
                     <div className="md:w-1/2 flex flex-col">
                       <div className="mb-2">
                         <span className="text-xs font-bold px-2 py-1 bg-gray-100 text-gray-600 rounded">
