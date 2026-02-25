@@ -52,7 +52,7 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
 
   const buildRequest = (model, payload) => ({
-    url: `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${apiKey}`,
+    url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     options: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -328,7 +328,7 @@ export default function App() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Key className="text-emerald-600 w-4 h-4" />
-              <span className="text-sm font-semibold text-gray-700">Google Cloud APIキー</span>
+              <span className="text-sm font-semibold text-gray-700">Gemini APIキー</span>
             </div>
             <button
               type="button"
