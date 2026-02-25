@@ -154,10 +154,10 @@ export default function App() {
       );
 
       const systemInstruction = `あなたはAI画像生成プロンプトの専門家です。
-与えられたイラストの「説明(description)」と「目的(purpose)」から、画像生成AI用の高品質な英語プロンプトを作成してください。
+与えられたイラストの「説明(description)」と「目的(purpose)」から、インフォグラフィック画像を生成するAI(nanobanana)用の高品質な日本語プロンプトを作成してください。
 【スタイル指定（必須）】
 全てのプロンプトの末尾に、以下のスタイル指定を含めて一貫性を持たせてください：
-"flat vector illustration, corporate memphis style, clean lines, minimalistic, friendly soft colors, simple white background, high quality, modern business aesthetic"
+"16：9の横長画像、きれいな線、シンプルでテキストは最小限、シンプルな白い背景、高品質、モダンなビジネスデザイン"
 `;
 
       const payload = {
