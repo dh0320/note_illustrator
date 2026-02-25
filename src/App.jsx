@@ -179,7 +179,7 @@ export default function App() {
               type: 'OBJECT',
               properties: {
                 id: { type: 'STRING' },
-                prompt: { type: 'STRING', description: 'English prompt for AI image generation' },
+                prompt: { type: 'STRING', description: 'prompt for AI image generation' },
               },
             },
           },
@@ -578,7 +578,7 @@ export default function App() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-2">生成されたプロンプトの確認</h2>
               <p className="text-sm text-gray-500 mb-6">
-                画像生成AIに渡す英語のプロンプトが作成されました。必要に応じて微調整が可能です。
+                画像生成AIに渡すプロンプトが作成されました。必要に応じて微調整が可能です。
               </p>
 
               <div className="space-y-4">
