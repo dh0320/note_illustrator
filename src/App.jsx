@@ -16,8 +16,6 @@ import {
   Eye,
   EyeOff,
   Settings,
-  ToggleLeft,
-  ToggleRight,
 } from 'lucide-react';
 
 // Exponential backoff helper
@@ -40,29 +38,11 @@ const fetchWithRetry = async (url, options, maxRetries = 5) => {
   }
 };
 
-const STUDIO_TEXT_MODEL = 'gemini-2.0-flash';
-const STUDIO_IMAGE_MODEL = 'gemini-2.0-flash-preview-image-generation';
-const VERTEX_TEXT_MODEL = 'gemini-3.1-pro-preview';
-const VERTEX_IMAGE_MODEL = 'gemini-3-pro-image-preview';
-
 export default function App() {
-  // Auth mode
-  const [useVertexAI, setUseVertexAI] = useState(false);
-
-  // Google AI Studio
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-
-  // Vertex AI
-  const [projectId, setProjectId] = useState('');
-  const [region, setRegion] = useState('us-central1');
-  const [accessToken, setAccessToken] = useState('');
-  const [showAccessToken, setShowAccessToken] = useState(false);
-
-  // Models
-  const [textModel, setTextModel] = useState(STUDIO_TEXT_MODEL);
-  const [imageModel, setImageModel] = useState(STUDIO_IMAGE_MODEL);
-
+  const [textModel, setTextModel] = useState('gemini-3.1-pro-preview');
+  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
   const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState(1);
   const [manuscript, setManuscript] = useState('');
@@ -71,56 +51,19 @@ export default function App() {
   const [globalError, setGlobalError] = useState('');
   const [editingId, setEditingId] = useState(null);
 
-  const switchMode = (toVertex) => {
-    setUseVertexAI(toVertex);
-    if (toVertex) {
-      setTextModel(VERTEX_TEXT_MODEL);
-      setImageModel(VERTEX_IMAGE_MODEL);
-    } else {
-      setTextModel(STUDIO_TEXT_MODEL);
-      setImageModel(STUDIO_IMAGE_MODEL);
-    }
-  };
-
-  // Build fetch URL + options depending on auth mode
-  const buildRequest = (model, payload) => {
-    if (useVertexAI) {
-      return {
-        url: `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/${model}:generateContent`,
-        options: {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(payload),
-        },
-      };
-    }
-    return {
-      url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      options: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      },
-    };
-  };
-
-  const validateAuth = () => {
-    if (useVertexAI) {
-      if (!accessToken.trim()) return 'アクセストークンを入力してください。';
-      if (!projectId.trim()) return 'Google CloudプロジェクトIDを入力してください。';
-    } else {
-      if (!apiKey.trim()) return 'APIキーを入力してください。';
-    }
-    return null;
-  };
+  // Vertex AI Express: APIキーで aiplatform.googleapis.com を使用
+  const buildRequest = (model, payload) => ({
+    url: `https://aiplatform.googleapis.com/v1beta1/projects/-/locations/-/publishers/google/models/${model}:generateContent?key=${apiKey}`,
+    options: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  });
 
   // --- Step 1: Analyze Manuscript & Propose Illustrations ---
   const handleAnalyze = async () => {
-    const authError = validateAuth();
-    if (authError) { setGlobalError(authError); return; }
+    if (!apiKey.trim()) { setGlobalError('APIキーを入力してください。'); return; }
     if (!manuscript.trim()) { setGlobalError('原稿を入力してください。'); return; }
 
     setIsProcessing(true);
@@ -381,134 +324,44 @@ export default function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Auth & Settings Panel */}
+        {/* API Key & Settings */}
         <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          {/* Mode Toggle */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Key className="text-emerald-600 w-4 h-4" />
-              <span className="text-sm font-semibold text-gray-700">認証設定</span>
+              <span className="text-sm font-semibold text-gray-700">Google Cloud APIキー</span>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSettings(v => !v)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
-                style={{ border: 'none', background: 'transparent' }}
-              >
-                <Settings className="w-3 h-3" />
-                モデル設定
-              </button>
-            </div>
-          </div>
-
-          {/* Auth Mode Selector */}
-          <div className="flex gap-2 mb-3">
             <button
               type="button"
-              onClick={() => switchMode(false)}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                !useVertexAI
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-              style={{ border: 'none' }}
+              onClick={() => setShowSettings(v => !v)}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
+              style={{ border: 'none', background: 'transparent' }}
             >
-              Google AI Studio（APIキー）
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode(true)}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                useVertexAI
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-              style={{ border: 'none' }}
-            >
-              Vertex AI（アクセストークン）
+              <Settings className="w-3 h-3" />
+              モデル設定
             </button>
           </div>
+          <div className="relative">
+            <input
+              type={showApiKey ? 'text' : 'password'}
+              className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
+              placeholder="AIzaSy..."
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowApiKey(v => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              style={{ border: 'none', background: 'transparent' }}
+            >
+              {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            キーはブラウザ内にのみ保持されます。
+          </p>
 
-          {/* Google AI Studio fields */}
-          {!useVertexAI && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Gemini APIキー</label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
-                  placeholder="AIzaSy..."
-                  value={apiKey}
-                  onChange={e => setApiKey(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(v => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                  style={{ border: 'none', background: 'transparent' }}
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="underline">Google AI Studio</a> でキーを取得できます。
-              </p>
-            </div>
-          )}
-
-          {/* Vertex AI fields */}
-          {useVertexAI && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">プロジェクトID</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-emerald-500"
-                    placeholder="my-project-id"
-                    value={projectId}
-                    onChange={e => setProjectId(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">リージョン</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-emerald-500"
-                    placeholder="us-central1"
-                    value={region}
-                    onChange={e => setRegion(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">アクセストークン</label>
-                <div className="relative">
-                  <input
-                    type={showAccessToken ? 'text' : 'password'}
-                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 font-mono"
-                    placeholder="ya29...."
-                    value={accessToken}
-                    onChange={e => setAccessToken(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAccessToken(v => !v)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                    style={{ border: 'none', background: 'transparent' }}
-                  >
-                    {showAccessToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  ターミナルで <code className="bg-gray-100 px-1 rounded font-mono">gcloud auth print-access-token</code> を実行してコピーしてください（有効期限1時間）。
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Model Settings */}
           {showSettings && (
             <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
               <div>
@@ -533,7 +386,7 @@ export default function App() {
           )}
 
           {!showSettings && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-gray-400 mt-1">
               テキスト: <code className="bg-gray-100 px-1 rounded">{textModel}</code> ／
               画像: <code className="bg-gray-100 px-1 rounded">{imageModel}</code>
             </p>
@@ -568,7 +421,7 @@ export default function App() {
             <div className="flex justify-end">
               <button
                 onClick={handleAnalyze}
-                disabled={isProcessing || !manuscript.trim() || (!useVertexAI && !apiKey.trim()) || (useVertexAI && (!accessToken.trim() || !projectId.trim()))}
+                disabled={isProcessing || !manuscript.trim() || !apiKey.trim()}
                 className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-medium py-3 px-6 rounded-lg flex items-center gap-2 transition-all shadow-sm"
                 style={{ border: 'none' }}
               >
