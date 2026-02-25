@@ -15,10 +15,8 @@ import {
   Key,
   Eye,
   EyeOff,
+  Settings,
 } from 'lucide-react';
-
-const TEXT_MODEL = 'gemini-3.1-pro-preview';
-const IMAGE_MODEL = 'gemini-3-pro-image-preview';
 
 // Exponential backoff helper
 const fetchWithRetry = async (url, options, maxRetries = 5) => {
@@ -43,6 +41,9 @@ const fetchWithRetry = async (url, options, maxRetries = 5) => {
 export default function App() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [textModel, setTextModel] = useState('gemini-3.1-pro-preview');
+  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
+  const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState(1);
   const [manuscript, setManuscript] = useState('');
   const [proposals, setProposals] = useState([]);
@@ -91,7 +92,7 @@ export default function App() {
       };
 
       const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -189,7 +190,7 @@ export default function App() {
       };
 
       const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -241,7 +242,7 @@ export default function App() {
         };
 
         const result = await fetchWithRetry(
-          `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -338,36 +339,77 @@ export default function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* API Key Input */}
+        {/* API Key & Settings */}
         <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Key className="text-emerald-600 w-4 h-4" />
-            <span className="text-sm font-semibold text-gray-700">Gemini APIキー</span>
-          </div>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
-                placeholder="AIzaSy..."
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(v => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                style={{ border: 'none', background: 'transparent' }}
-              >
-                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Key className="text-emerald-600 w-4 h-4" />
+              <span className="text-sm font-semibold text-gray-700">Gemini APIキー</span>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowSettings(v => !v)}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
+              style={{ border: 'none', background: 'transparent' }}
+            >
+              <Settings className="w-3 h-3" />
+              モデル設定
+            </button>
           </div>
-          <p className="text-xs text-gray-400 mt-1">
-            キーはブラウザ内にのみ保持されます。
-            テキスト: <code className="bg-gray-100 px-1 rounded">{TEXT_MODEL}</code> ／
-            画像: <code className="bg-gray-100 px-1 rounded">{IMAGE_MODEL}</code>
-          </p>
+          <div className="relative">
+            <input
+              type={showApiKey ? 'text' : 'password'}
+              className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
+              placeholder="AIzaSy..."
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowApiKey(v => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              style={{ border: 'none', background: 'transparent' }}
+            >
+              {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {showSettings && (
+            <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">テキスト生成モデル</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-mono focus:ring-1 focus:ring-emerald-500"
+                  value={textModel}
+                  onChange={e => setTextModel(e.target.value)}
+                  placeholder="gemini-2.0-flash"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">画像生成モデル</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-mono focus:ring-1 focus:ring-emerald-500"
+                  value={imageModel}
+                  onChange={e => setImageModel(e.target.value)}
+                  placeholder="gemini-3-pro-image-preview"
+                />
+              </div>
+              <p className="text-xs text-gray-400">
+                フリーティアで使用可能な例: テキスト <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash</code>、
+                画像 <code className="bg-gray-100 px-1 rounded">gemini-2.0-flash-preview-image-generation</code>
+              </p>
+            </div>
+          )}
+
+          {!showSettings && (
+            <p className="text-xs text-gray-400 mt-1">
+              キーはブラウザ内にのみ保持されます。
+              テキスト: <code className="bg-gray-100 px-1 rounded">{textModel}</code> ／
+              画像: <code className="bg-gray-100 px-1 rounded">{imageModel}</code>
+            </p>
+          )}
         </div>
 
         <Stepper />
