@@ -8,7 +8,7 @@ import {
   Download,
   Loader2,
   AlertCircle,
-  ChevronRight,
+
   Save,
   Trash2,
   RefreshCw,
@@ -17,6 +17,14 @@ import {
   EyeOff,
   Settings,
 } from 'lucide-react';
+
+// Style specification appended to all image generation prompts
+const IMAGE_STYLE_SUFFIX = '16：9の横長画像、きれいな線、シンプルでテキストは最小限、シンプルな白い背景、高品質、モダンなビジネスデザイン';
+
+// Build image generation prompt from proposal data
+const buildImagePrompt = (proposal) => {
+  return `${proposal.description}\n目的: ${proposal.purpose}\nスタイル指定: ${IMAGE_STYLE_SUFFIX}`;
+};
 
 // Exponential backoff helper
 const fetchWithRetry = async (url, options, maxRetries = 5) => {
@@ -118,7 +126,7 @@ export default function App() {
     }
   };
 
-  // --- Step 2/3: Proposal Management ---
+  // --- Step 2: Proposal Management ---
   const handleUpdateProposal = (id, field, value) => {
     setProposals(prev => prev.map(p => (p.id === id ? { ...p, [field]: value } : p)));
   };
@@ -142,74 +150,9 @@ export default function App() {
 
   const allApproved = proposals.length > 0 && proposals.every(p => p.approved);
 
-  // --- Step 4: Generate Image Prompts ---
-  const handleGeneratePrompts = async () => {
-    setIsProcessing(true);
-    setGlobalError('');
-
-    try {
-      const approvedProposals = proposals.filter(p => p.approved);
-      const promptInput = JSON.stringify(
-        approvedProposals.map(p => ({ id: p.id, description: p.description, purpose: p.purpose }))
-      );
-
-      const systemInstruction = `あなたはAI画像生成プロンプトの専門家です。
-与えられたイラストの「説明(description)」と「目的(purpose)」から、インフォグラフィック画像を生成するAI(nanobanana)用の高品質な日本語プロンプトを作成してください。
-【スタイル指定（必須）】
-全てのプロンプトの末尾に、以下のスタイル指定を含めて一貫性を持たせてください：
-"16：9の横長画像、きれいな線、シンプルでテキストは最小限、シンプルな白い背景、高品質、モダンなビジネスデザイン"
-`;
-
-      const payload = {
-        contents: [
-          {
-            parts: [
-              {
-                text: `以下のイラスト設定を日本語の画像生成プロンプトに変換してください。日本人向けの画像です。:\n${promptInput}`,
-              },
-            ],
-          },
-        ],
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'ARRAY',
-            items: {
-              type: 'OBJECT',
-              properties: {
-                id: { type: 'STRING' },
-                prompt: { type: 'STRING', description: 'prompt for AI image generation' },
-              },
-            },
-          },
-        },
-      };
-
-      const { url, options } = buildRequest(textModel, payload);
-      const result = await fetchWithRetry(url, options);
-
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      const parsed = JSON.parse(text);
-
-      setProposals(prev =>
-        prev.map(p => {
-          const generated = parsed.find(g => g.id === p.id);
-          return generated ? { ...p, prompt: generated.prompt } : p;
-        })
-      );
-
-      setStep(4);
-    } catch (err) {
-      setGlobalError(`プロンプトの生成に失敗しました: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // --- Step 5: Sequential Image Generation ---
+  // --- Step 3: Sequential Image Generation ---
   const handleGenerateImages = async () => {
-    setStep(5);
+    setStep(3);
     setGlobalError('');
 
     setProposals(prev =>
@@ -220,13 +163,15 @@ export default function App() {
       const proposal = proposals[i];
       if (!proposal.approved) continue;
 
+      const prompt = buildImagePrompt(proposal);
+
       setProposals(prev =>
-        prev.map(p => (p.id === proposal.id ? { ...p, status: 'generating', error: null } : p))
+        prev.map(p => (p.id === proposal.id ? { ...p, prompt, status: 'generating', error: null } : p))
       );
 
       try {
         const payload = {
-          contents: [{ parts: [{ text: proposal.prompt }] }],
+          contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             responseModalities: ['IMAGE'],
           },
@@ -278,12 +223,12 @@ export default function App() {
 
   // --- Stepper UI ---
   const Stepper = () => {
-    const steps = ['原稿入力', 'イラスト案の確認・修正', 'プロンプト生成', '画像生成'];
+    const steps = ['原稿入力', 'イラスト案の確認・修正', '画像生成'];
     return (
       <div className="flex items-center justify-between mb-8 px-4">
         {steps.map((s, i) => {
           const stepNum = i + 1;
-          const isActive = step === stepNum || (step > 4 && stepNum === 4);
+          const isActive = step === stepNum || (step > 3 && stepNum === 3);
           const isPast = step > stepNum;
           return (
             <div key={i} className="flex flex-col items-center flex-1 relative">
@@ -431,8 +376,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 2/3: Review and Edit Proposals */}
-        {(step === 2 || step === 3) && (
+        {/* Step 2: Review and Edit Proposals */}
+        {step === 2 && (
           <div className="space-y-6 animate-fade-in">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-2">提案されたイラスト案</h2>
@@ -554,7 +499,7 @@ export default function App() {
                     戻る
                   </button>
                   <button
-                    onClick={handleGeneratePrompts}
+                    onClick={handleGenerateImages}
                     disabled={!allApproved || isProcessing || proposals.length === 0}
                     className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-6 rounded-lg flex items-center gap-2 transition-all shadow-sm"
                     style={{ border: 'none' }}
@@ -562,9 +507,9 @@ export default function App() {
                     {isProcessing ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <ChevronRight className="w-4 h-4" />
+                      <ImageIcon className="w-4 h-4" />
                     )}
-                    {isProcessing ? 'プロンプト生成中...' : 'プロンプトを生成する'}
+                    {isProcessing ? '画像生成中...' : '画像を生成する'}
                   </button>
                 </div>
               </div>
@@ -572,58 +517,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 4: Review Prompts */}
-        {step === 4 && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">生成されたプロンプトの確認</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                画像生成AIに渡すプロンプトが作成されました。必要に応じて微調整が可能です。
-              </p>
-
-              <div className="space-y-4">
-                {proposals
-                  .filter(p => p.approved)
-                  .map(proposal => (
-                    <div key={proposal.id} className="border border-gray-200 rounded-xl p-5 bg-white">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-xs font-bold px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                          ID: {proposal.id}
-                        </span>
-                        <span className="text-xs text-gray-500 truncate max-w-[200px]">{proposal.purpose}</span>
-                      </div>
-                      <textarea
-                        value={proposal.prompt}
-                        onChange={e => handleUpdateProposal(proposal.id, 'prompt', e.target.value)}
-                        className="w-full p-3 text-sm font-mono bg-gray-50 border border-gray-300 rounded-md focus:ring-1 focus:ring-emerald-500 h-28"
-                      />
-                    </div>
-                  ))}
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-6">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                  style={{ border: 'none' }}
-                >
-                  戻る
-                </button>
-                <button
-                  onClick={handleGenerateImages}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-6 rounded-lg flex items-center gap-2 transition-all shadow-sm"
-                  style={{ border: 'none' }}
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  画像を順次生成する
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Generation & Results */}
-        {step >= 5 && (
+        {/* Step 3: Generation & Results */}
+        {step >= 3 && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">生成されたイラスト</h2>
