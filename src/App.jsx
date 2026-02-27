@@ -42,7 +42,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [textModel, setTextModel] = useState('gemini-3.1-pro-preview');
-  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
+  const [imageModel, setImageModel] = useState('gemini-3.1-flash-image-preview');
   const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState(1);
   const [manuscript, setManuscript] = useState('');
